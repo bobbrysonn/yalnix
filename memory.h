@@ -6,6 +6,7 @@
 extern pte_t *kernel_region0_pt;
 extern unsigned int physical_frame_count;
 
+int KernelBrkPage(void);
 void MemoryInit(unsigned int pmem_size);
 int FrameAlloc(void);
 void FrameFree(int pfn);

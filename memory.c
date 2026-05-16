@@ -6,16 +6,12 @@ unsigned int physical_frame_count = 0;
 
 static unsigned char frame_allocated[MAX_PMEM_SIZE / PAGESIZE];
 
-static int
-AddressToPage(void *addr)
-{
-    return ((unsigned int)addr) >> PAGESHIFT;
-}
-
 void
 MemoryInit(unsigned int pmem_size)
 {
     unsigned int i;
+    unsigned int kernel_stack_base_page;
+    unsigned int kernel_stack_limit_page;
 
     physical_frame_count = pmem_size / PAGESIZE;
     if (physical_frame_count > (MAX_PMEM_SIZE / PAGESIZE)) {
@@ -27,11 +23,21 @@ MemoryInit(unsigned int pmem_size)
     }
 
     /* Reserve the kernel image and initial heap frames. */
-    for (i = 0; i < (unsigned int)_orig_kernel_brk_page && i < physical_frame_count; i++) {
+    for (i = 0; i < (unsigned int)KernelBrkPage() && i < physical_frame_count; i++) {
+        frame_allocated[i] = 1;
+    }
+
+    kernel_stack_base_page = KERNEL_STACK_BASE >> PAGESHIFT;
+    kernel_stack_limit_page = KERNEL_STACK_LIMIT >> PAGESHIFT;
+    for (i = kernel_stack_base_page; i < kernel_stack_limit_page && i < physical_frame_count; i++) {
         frame_allocated[i] = 1;
     }
 
     kernel_region0_pt = MemoryAllocPageTable();
+
+    for (i = 0; i < (unsigned int)KernelBrkPage() && i < physical_frame_count; i++) {
+        frame_allocated[i] = 1;
+    }
 }
 
 int
@@ -99,7 +105,7 @@ MemoryBuildKernelRegion0(void)
         MemoryMapPage(kernel_region0_pt, page, page, PROT_READ | PROT_EXEC);
     }
 
-    for (page = _first_kernel_data_page; page < _orig_kernel_brk_page; page++) {
+    for (page = _first_kernel_data_page; page < KernelBrkPage(); page++) {
         MemoryMapPage(kernel_region0_pt, page, page, PROT_READ | PROT_WRITE);
     }
 
