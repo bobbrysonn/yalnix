@@ -1,0 +1,326 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\lstdefinestyle{yalnixpseudo}{
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue!60!black},
+  commentstyle=\color{gray!70!black},
+  columns=fullflexible,
+  keepspaces=true,
+  frame=single,
+  breaklines=true,
+  showstringspaces=false
+}
+
+\title{Yalnix Checkpoints 1 and 2 Pseudocode}
+\author{COSC 58}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Checkpoint 1 Scope}
+
+Checkpoint 1 is a design checkpoint. The implementation should have real source files,
+data structure sketches, function stubs, and pseudocode for the traps, syscalls, and
+major kernel flows. The first version of these notes is reflected in the project source
+tree and summarized here for Overleaf.
+
+\subsection{Primary Source Files}
+
+\begin{itemize}[noitemsep]
+  \item \texttt{kernelstart.c}: boot sequence and transition into idle.
+  \item \texttt{memory.c}, \texttt{memory.h}: physical frame tracking and page-table helpers.
+  \item \texttt{process.c}, \texttt{process.h}: PCB layout and process ownership.
+  \item \texttt{trap.c}, \texttt{trap.h}: interrupt vector setup and trap handlers.
+  \item \texttt{syscalls.c}, \texttt{syscalls.h}: syscall dispatch and early syscall stubs.
+  \item \texttt{idle.c}, \texttt{idle.h}: idle loop.
+  \item \texttt{Queue.c}, \texttt{Queue.h}: intrusive queue helpers for ready and blocked queues.
+  \item \texttt{kernelbrk.c}: kernel heap break management.
+  \item \texttt{template.c}: future \texttt{LoadProgram} implementation plan.
+\end{itemize}
+
+\section{Core Data Structures}
+
+\subsection{PCB}
+
+Each process is represented by a process control block.
+
+\begin{lstlisting}[style=yalnixpseudo]
+PCB:
+  pid
+  state
+  region1_pt
+  saved UserContext
+  saved KernelContext
+  kernel_stack_pfns
+  parent
+  children queue
+  queue entry for ready/blocked queues
+\end{lstlisting}
+
+\subsection{Global Kernel State}
+
+\begin{lstlisting}[style=yalnixpseudo]
+global current_process
+global idle_process
+global ready_queue
+global kernel_region0_pt
+global frame_allocated[]
+global physical_frame_count
+global vm_enabled
+\end{lstlisting}
+
+\section{Checkpoint 2 Boot Flow}
+
+\subsection{\texttt{KernelStart}}
+
+\begin{lstlisting}[style=yalnixpseudo]
+KernelStart(cmd_args, pmem_size, uctxt):
+  trace boot start
+
+  ProcessInit()
+    initialize ready queue
+
+  MemoryInit(pmem_size)
+    compute number of physical frames
+    mark all frames free
+    reserve kernel text/data/original heap frames
+    allocate Region 0 page table
+
+  MemoryBuildKernelRegion0()
+    identity-map kernel text pages as read/exec
+    identity-map kernel data and heap pages as read/write
+    identity-map current kernel stack pages as read/write
+
+  TrapInit()
+    fill all trap vector entries with TrapUnhandled
+    install TrapClock at TRAP_CLOCK
+    install TrapKernel at TRAP_KERNEL
+    write trap vector address to REG_VECTOR_BASE
+
+  idle_process = ProcessCreateIdle(uctxt)
+    allocate PCB
+    allocate Region 1 page table
+    allocate one frame for idle's user stack
+    map top Region 1 page read/write
+    ask helper_new_pid(region1_pt) for idle pid
+    copy initial UserContext
+    set pc = DoIdle
+    set sp near VMEM_1_LIMIT
+
+  current_process = idle_process
+
+  MemoryInstallPageTables(idle_process->region1_pt)
+    write REG_PTBR0, REG_PTLR0
+    write REG_PTBR1, REG_PTLR1
+
+  WriteRegister(REG_VM_ENABLE, 1)
+  vm_enabled = true
+  flush entire TLB
+
+  copy idle_process->user_context into *uctxt
+  return from KernelStart into user mode
+\end{lstlisting}
+
+\section{Virtual Memory}
+
+\subsection{Initial Region 0}
+
+Before enabling virtual memory, any physical page already used by the kernel must still
+refer to the same memory after VM is enabled. The initial Region 0 page table therefore
+uses identity mappings.
+
+\begin{lstlisting}[style=yalnixpseudo]
+MemoryBuildKernelRegion0():
+  for page in [_first_kernel_text_page, _first_kernel_data_page):
+    map page -> same pfn with PROT_READ | PROT_EXEC
+
+  for page in [_first_kernel_data_page, _orig_kernel_brk_page):
+    map page -> same pfn with PROT_READ | PROT_WRITE
+
+  for page in kernel stack virtual pages:
+    map page -> same pfn with PROT_READ | PROT_WRITE
+\end{lstlisting}
+
+\subsection{Frame Allocation}
+
+\begin{lstlisting}[style=yalnixpseudo]
+FrameAlloc():
+  for each physical frame:
+    if frame is free:
+      mark allocated
+      return pfn
+  return ERROR
+
+FrameFree(pfn):
+  validate pfn
+  mark frame free
+\end{lstlisting}
+
+\section{\texttt{SetKernelBrk}}
+
+\begin{lstlisting}[style=yalnixpseudo]
+SetKernelBrk(addr):
+  requested_page = round addr up to page
+  never shrink below _orig_kernel_brk_page
+
+  if VM is not enabled:
+    record highest requested kernel break
+    return SUCCESS
+
+  if growing:
+    for each new heap page:
+      allocate frame
+      map Region 0 page read/write
+      flush stale TLB entry
+
+  if shrinking:
+    for each removed heap page:
+      free mapped frame
+      invalidate PTE
+      flush stale TLB entry
+
+  update current kernel break
+  return SUCCESS or ERROR
+\end{lstlisting}
+
+\section{Trap Handling}
+
+\subsection{Trap Vector}
+
+\begin{lstlisting}[style=yalnixpseudo]
+TrapInit():
+  for i in [0, TRAP_VECTOR_SIZE):
+    trap_vector[i] = TrapUnhandled
+
+  trap_vector[TRAP_CLOCK] = TrapClock
+  trap_vector[TRAP_KERNEL] = TrapKernel
+
+  WriteRegister(REG_VECTOR_BASE, trap_vector)
+\end{lstlisting}
+
+\subsection{Clock Trap}
+
+\begin{lstlisting}[style=yalnixpseudo]
+TrapClock(uctxt):
+  save incoming UserContext into current PCB
+  trace clock trap
+
+  future checkpoint:
+    update global clock tick
+    wake delayed processes
+    if ready queue is non-empty:
+      context switch to next ready process
+    else:
+      keep or dispatch idle
+
+  copy selected process UserContext back to *uctxt
+\end{lstlisting}
+
+\subsection{Kernel Trap}
+
+\begin{lstlisting}[style=yalnixpseudo]
+TrapKernel(uctxt):
+  save incoming UserContext into current PCB
+  trace syscall code in hex
+  SyscallDispatch(uctxt)
+  copy current PCB UserContext back to *uctxt
+\end{lstlisting}
+
+\subsection{Unhandled Trap}
+
+\begin{lstlisting}[style=yalnixpseudo]
+TrapUnhandled(uctxt):
+  trace vector, code, fault address, pc, and sp
+  future checkpoint:
+    abort current user process if recoverable
+    halt only for unrecoverable kernel state
+\end{lstlisting}
+
+\section{Early Syscalls}
+
+\subsection{Dispatch}
+
+\begin{lstlisting}[style=yalnixpseudo]
+SyscallDispatch(uctxt):
+  switch uctxt->code:
+    YALNIX_GETPID:
+      regs[0] = current_process->pid
+    YALNIX_BRK:
+      regs[0] = SysBrk(regs[0])
+    YALNIX_DELAY:
+      regs[0] = SysDelay(regs[0])
+    default:
+      trace unsupported syscall
+      regs[0] = ERROR
+\end{lstlisting}
+
+\subsection{Future \texttt{Brk}}
+
+\begin{lstlisting}[style=yalnixpseudo]
+SysBrk(addr):
+  validate requested break is in Region 1
+  validate break does not collide with stack red zone
+  if growing:
+    allocate frames and map heap pages read/write
+  if shrinking:
+    free removed heap pages
+  flush affected TLB entries
+  return SUCCESS or ERROR
+\end{lstlisting}
+
+\subsection{Future \texttt{Delay}}
+
+\begin{lstlisting}[style=yalnixpseudo]
+SysDelay(clock_ticks):
+  if clock_ticks < 0:
+    return ERROR
+  if clock_ticks == 0:
+    return SUCCESS
+
+  set process wake_tick = current_tick + clock_ticks
+  move current process to delay queue
+  context switch to next ready process or idle
+  return SUCCESS when resumed
+\end{lstlisting}
+
+\section{Idle}
+
+\begin{lstlisting}[style=yalnixpseudo]
+DoIdle():
+  forever:
+    TracePrintf("DoIdle")
+    Pause()
+\end{lstlisting}
+
+\section{Checkpoint 3 Notes}
+
+The current \texttt{LoadProgram} file is intentionally a stub. The planned flow is:
+
+\begin{lstlisting}[style=yalnixpseudo]
+LoadProgram(name, args, proc):
+  open executable
+  use LoadInfo to validate Yalnix executable layout
+  compute text, data, bss, heap, and stack pages
+  copy arguments into temporary Region 0 buffer
+  tear down old Region 1 mappings
+  map new text pages read/write while loading
+  map data/bss pages read/write
+  map stack pages read/write at top of Region 1
+  flush Region 1 TLB entries
+  read text and data from executable
+  zero bss
+  copy argc/argv onto user stack
+  change text protections to read/exec
+  set proc->user_context.pc to entry point
+  set proc->user_context.sp to new stack pointer
+  return SUCCESS
+\end{lstlisting}
+
+\end{document}

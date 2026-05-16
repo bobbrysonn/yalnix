@@ -1,0 +1,9 @@
+*.o
+*~
+TRACE
+TTYLOG*
+yalnix
+DISK
+core.*
+core
+user
