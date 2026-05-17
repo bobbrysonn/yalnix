@@ -17,21 +17,16 @@
   showstringspaces=false
 }
 
-\title{Yalnix Checkpoints 1 and 2 Pseudocode}
+\title{Yalnix Checkpoints 1 \& 2 Pseudocode}
 \author{COSC 58}
 \date{\today}
 
 \begin{document}
 \maketitle
 
-\section{Checkpoint 1 Scope}
+\section{Scope}
 
-Checkpoint 1 is a design checkpoint. The implementation should have real source files,
-data structure sketches, function stubs, and pseudocode for the traps, syscalls, and
-major kernel flows. The first version of these notes is reflected in the project source
-tree and summarized here for Overleaf.
-
-\subsection{Primary Source Files}
+\subsection{Source Files}
 
 \begin{itemize}[noitemsep]
   \item \texttt{kernelstart.c}: boot sequence and transition into idle.
@@ -40,9 +35,9 @@ tree and summarized here for Overleaf.
   \item \texttt{trap.c}, \texttt{trap.h}: interrupt vector setup and trap handlers.
   \item \texttt{syscalls.c}, \texttt{syscalls.h}: syscall dispatch and early syscall stubs.
   \item \texttt{idle.c}, \texttt{idle.h}: idle loop.
-  \item \texttt{Queue.c}, \texttt{Queue.h}: intrusive queue helpers for ready and blocked queues.
+  \item \texttt{Queue.c}, \texttt{Queue.h}: queue helpers for ready and blocked queues.
   \item \texttt{kernelbrk.c}: kernel heap break management.
-  \item \texttt{template.c}: future \texttt{LoadProgram} implementation plan.
+  \item \texttt{template.c}: future \texttt{LoadProgram}.
 \end{itemize}
 
 \section{Core Data Structures}
@@ -299,9 +294,9 @@ DoIdle():
     Pause()
 \end{lstlisting}
 
-\section{Checkpoint 3 Notes}
+\section{Upcoming Checkpoint 3}
 
-The current \texttt{LoadProgram} file is intentionally a stub. The planned flow is:
+The current \texttt{LoadProgram} file is a stub. The planned flow is:
 
 \begin{lstlisting}[style=yalnixpseudo]
 LoadProgram(name, args, proc):
