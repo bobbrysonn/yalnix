@@ -38,6 +38,8 @@ ProcessCreateIdle(UserContext *uctxt)
 
     proc->pid = helper_new_pid(proc->region1_pt);
     proc->state = PROC_RUNNING;
+    proc->kernel_stack_pfns[0] = KERNEL_STACK_BASE >> PAGESHIFT;
+    proc->kernel_stack_pfns[1] = (KERNEL_STACK_BASE >> PAGESHIFT) + 1;
     proc->user_context = *uctxt;
     proc->user_context.pc = DoIdle;
     proc->user_context.sp = (void *)(VMEM_1_LIMIT - 4);
