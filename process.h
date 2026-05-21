@@ -19,6 +19,10 @@ typedef struct pcb {
     UserContext user_context;
     KernelContext kernel_context;
     unsigned int kernel_stack_pfns[KERNEL_STACK_MAXSIZE / PAGESIZE];
+    void *user_brk;
+    void *user_heap_start;
+    int user_stack_low_page;
+    unsigned int delay_until;
     struct pcb *parent;
     Queue children;
     QueueEntry queue_entry;
@@ -26,12 +30,17 @@ typedef struct pcb {
 
 extern PCB *current_process;
 extern PCB *idle_process;
+extern PCB *init_process;
 extern Queue ready_queue;
+extern unsigned int clock_ticks;
 
 void ProcessInit(void);
 PCB *ProcessCreateIdle(UserContext *uctxt);
+PCB *ProcessCreateInit(UserContext *uctxt);
 void ProcessSetCurrent(PCB *proc);
 PCB *ProcessCurrent(void);
+int ProcessCloneKernelContext(PCB *proc);
+int ProcessSwitch(PCB *next);
 void ProcessDestroy(PCB *proc);
 
 #endif

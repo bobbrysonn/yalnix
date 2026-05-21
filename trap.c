@@ -22,8 +22,29 @@ TrapInit(void)
 void
 TrapClock(UserContext *uctxt)
 {
+    if (current_process != 0) {
+        current_process->user_context = *uctxt;
+    }
+
+    clock_ticks++;
     TracePrintf(1, "TRAP_CLOCK pc=%p sp=%p\n", uctxt->pc, uctxt->sp);
 
+    if (init_process != 0 && init_process->state == PROC_BLOCKED &&
+        init_process->delay_until <= clock_ticks) {
+        init_process->state = PROC_READY;
+    }
+
+    if (current_process == idle_process) {
+        if (init_process != 0 && init_process->state == PROC_READY) {
+            ProcessSwitch(init_process);
+        }
+    } else if (current_process == init_process && init_process->state == PROC_RUNNING) {
+        ProcessSwitch(idle_process);
+    }
+
+    if (current_process != 0) {
+        *uctxt = current_process->user_context;
+    }
 }
 
 void
