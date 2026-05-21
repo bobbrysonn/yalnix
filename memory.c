@@ -137,7 +137,11 @@ MemoryMapPage(pte_t *pt, int index, int pfn, int prot)
     pt[index].pfn = pfn;
 
     if (vm_enabled) {
-        WriteRegister(REG_TLB_FLUSH, index << PAGESHIFT);
+        if (pt == kernel_region0_pt) {
+            WriteRegister(REG_TLB_FLUSH, index << PAGESHIFT);
+        } else {
+            WriteRegister(REG_TLB_FLUSH, VMEM_1_BASE + (index << PAGESHIFT));
+        }
     }
 
     return SUCCESS;
@@ -155,6 +159,31 @@ MemoryUnmapPage(pte_t *pt, int index)
     pt[index].pfn = 0;
 
     if (vm_enabled) {
-        WriteRegister(REG_TLB_FLUSH, index << PAGESHIFT);
+        if (pt == kernel_region0_pt) {
+            WriteRegister(REG_TLB_FLUSH, index << PAGESHIFT);
+        } else {
+            WriteRegister(REG_TLB_FLUSH, VMEM_1_BASE + (index << PAGESHIFT));
+        }
+    }
+}
+
+void
+MemoryFreePageTableFrames(pte_t *pt)
+{
+    int i;
+
+    if (pt == 0) {
+        return;
+    }
+
+    for (i = 0; i < MAX_PT_LEN; i++) {
+        if (pt[i].valid) {
+            FrameFree(pt[i].pfn);
+            MemoryUnmapPage(pt, i);
+        }
+    }
+
+    if (vm_enabled) {
+        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
     }
 }

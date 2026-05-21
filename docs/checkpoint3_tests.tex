@@ -1,0 +1,69 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{hyperref}
+
+\lstdefinestyle{shell}{
+  basicstyle=\ttfamily\small,
+  columns=fullflexible,
+  keepspaces=true,
+  frame=single,
+  breaklines=true,
+  showstringspaces=false
+}
+
+\title{Yalnix Checkpoint 3 Test Notes}
+\author{COSC 58}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Test Commands}
+
+Run from the Thayer source directory:
+
+\begin{lstlisting}[style=shell]
+make clean
+make
+timeout 5 ./yalnix -W
+timeout 3 ./yalnix init
+\end{lstlisting}
+
+\section{Expected Observations}
+
+\begin{itemize}[noitemsep]
+  \item \texttt{make} builds both the kernel executable \texttt{yalnix} and the userland executable \texttt{init}.
+  \item \texttt{KernelStart} creates idle and init processes, switches to init's Region 1, and \texttt{LoadProgram} loads \texttt{init}.
+  \item Userland \texttt{init} prints its PID from \texttt{GetPid}.
+  \item The user library issues an early \texttt{Brk}; the kernel maps heap pages and returns success.
+  \item Clock traps alternate execution between \texttt{init} and idle while \texttt{init} pauses.
+  \item Every fifth init loop calls \texttt{Delay(2)}; init blocks, idle runs for clock ticks, then init resumes.
+\end{itemize}
+
+\section{Run Evidence}
+
+The explicit \texttt{./yalnix init} run checks that \texttt{cmd\_args[0]} selects the init executable. The no-argument run checks the default init name.
+
+Representative trace lines from the Checkpoint 3 smoke test:
+
+\begin{lstlisting}[style=shell]
+Yalnix    KernelStart: leaving for init pid 1
+Hardware  | Syscall trap Brk
+Hardware  | Syscall trap GetPid
+User Prog init: pid 1 starting
+User Prog init: loop 0 pid 1
+Yalnix    KernelStart: leaving for idle pid 0
+Yalnix    DoIdle
+User Prog init: loop 1 pid 1
+Yalnix    DoIdle
+User Prog init: loop 4 pid 1
+Hardware  | Syscall trap Delay
+Yalnix    DoIdle
+Yalnix    DoIdle
+User Prog init: loop 5 pid 1
+\end{lstlisting}
+
+\end{document}

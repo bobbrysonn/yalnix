@@ -16,5 +16,6 @@ void MemoryBuildKernelRegion0(void);
 void MemoryInstallPageTables(pte_t *region1_pt);
 int MemoryMapPage(pte_t *pt, int index, int pfn, int prot);
 void MemoryUnmapPage(pte_t *pt, int index);
+void MemoryFreePageTableFrames(pte_t *pt);
 
 #endif

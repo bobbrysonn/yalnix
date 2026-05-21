@@ -3,7 +3,9 @@
 TRACE
 TTYLOG*
 yalnix
+init
 DISK
+PHYS_MEM_*
 core.*
 core
 user
