@@ -8,6 +8,8 @@ typedef void (*TrapHandler)(UserContext *);
 void TrapInit(void);
 void TrapClock(UserContext *uctxt);
 void TrapKernel(UserContext *uctxt);
+void TrapMemory(UserContext *uctxt);
+void TrapAbort(UserContext *uctxt);
 void TrapUnhandled(UserContext *uctxt);
 
 #endif

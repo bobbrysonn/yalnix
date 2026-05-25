@@ -23,9 +23,12 @@ typedef struct pcb {
     void *user_heap_start;
     int user_stack_low_page;
     unsigned int delay_until;
+    int exit_status;
+    int waiting_for_child;
     struct pcb *parent;
     Queue children;
-    QueueEntry queue_entry;
+    QueueEntry ready_entry;
+    QueueEntry child_entry;
 } PCB;
 
 extern PCB *current_process;
@@ -37,10 +40,16 @@ extern unsigned int clock_ticks;
 void ProcessInit(void);
 PCB *ProcessCreateIdle(UserContext *uctxt);
 PCB *ProcessCreateInit(UserContext *uctxt);
+PCB *ProcessCreateChild(PCB *parent);
 void ProcessSetCurrent(PCB *proc);
 PCB *ProcessCurrent(void);
 int ProcessCloneKernelContext(PCB *proc);
 int ProcessSwitch(PCB *next);
+void ProcessMakeReady(PCB *proc);
+void ProcessSchedule(void);
+void ProcessWakeDelayed(void);
+void ProcessExitCurrent(int status);
+int ProcessGrowStack(PCB *proc, void *addr);
 void ProcessDestroy(PCB *proc);
 
 #endif

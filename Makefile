@@ -5,7 +5,7 @@ K_INCS = kernel.h memory.h process.h Queue.h syscalls.h trap.h idle.h
 KERNEL_SRCS = $(K_SRCS:%=$(K_SRC_DIR)/%)
 KERNEL_OBJS = $(KERNEL_SRCS:%.c=%.o)
 KERNEL_INCS = $(K_INCS:%=$(K_SRC_DIR)/%)
-U_SRCS = init.c
+U_SRCS = init.c cp4_fork.c cp4_exec.c cp4_target.c cp4_stack.c
 USER_SRCS = $(U_SRCS:%=$(K_SRC_DIR)/%)
 USER_OBJS = $(USER_SRCS:%.c=%.o)
 USER_APPS = $(U_SRCS:%.c=%)

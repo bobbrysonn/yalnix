@@ -1,0 +1,72 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{enumitem}
+\usepackage{listings}
+
+\lstdefinestyle{shell}{
+  basicstyle=\ttfamily\small,
+  columns=fullflexible,
+  keepspaces=true,
+  frame=single,
+  breaklines=true,
+  showstringspaces=false
+}
+
+\title{Yalnix Checkpoint 4 Test Notes}
+\author{COSC 58}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Test Commands}
+
+Run from the Thayer source directory:
+
+\begin{lstlisting}[style=shell]
+make clean
+make
+timeout 8 ./yalnix -W cp4_fork
+timeout 8 ./yalnix -W cp4_exec
+timeout 8 ./yalnix -W cp4_stack
+\end{lstlisting}
+
+\section{Expected Observations}
+
+\begin{itemize}[noitemsep]
+  \item \texttt{cp4\_fork} forks two children, each child exits with a different status, and the parent collects both with \texttt{Wait}.
+  \item A third \texttt{Wait} in \texttt{cp4\_fork} returns \texttt{ERROR}, showing the no-remaining-children case.
+  \item \texttt{cp4\_exec} replaces itself with \texttt{cp4\_target}; the pid remains the same and argc/argv are rebuilt by \texttt{LoadProgram}.
+  \item \texttt{cp4\_stack} touches more stack than the initially mapped user stack page, causing \texttt{TRAP\_MEMORY} stack growth before exiting.
+  \item Each test exits as the initial process, which halts the machine cleanly.
+\end{itemize}
+
+\section{Run Evidence}
+
+Representative \texttt{-W} trace lines:
+
+\begin{lstlisting}[style=shell]
+cp4_fork_W_RC=0
+User Prog cp4_fork: parent pid 1
+Hardware  | Syscall trap Fork
+Hardware  | Syscall trap Fork
+Hardware  | Syscall trap Wait
+User Prog cp4_fork: child A pid 2
+User Prog cp4_fork: child B pid 3
+User Prog cp4_fork: wait pid 3 status 22
+User Prog cp4_fork: wait pid 2 status 11
+User Prog cp4_fork: final wait rc -1
+
+cp4_exec_W_RC=0
+User Prog cp4_exec: before exec pid 1
+Hardware  | Syscall trap Exec
+User Prog cp4_target: pid 1 argc 3
+User Prog cp4_target: argv cp4_target alpha beta
+
+cp4_stack_W_RC=0
+Hardware  | Calling Yalnix handler for trap TRAP_MEMORY
+User Prog cp4_stack: touched 24576 bytes
+\end{lstlisting}
+
+\end{document}
