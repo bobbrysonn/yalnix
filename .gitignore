@@ -1,9 +1,14 @@
 *.o
 *~
+.nfs*
 TRACE
 TTYLOG*
 yalnix
 init
+cp4_fork
+cp4_exec
+cp4_target
+cp4_stack
 DISK
 PHYS_MEM_*
 core.*

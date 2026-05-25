@@ -16,6 +16,9 @@ TrapInit(void)
 
     trap_vector[TRAP_CLOCK] = TrapClock;
     trap_vector[TRAP_KERNEL] = TrapKernel;
+    trap_vector[TRAP_MEMORY] = TrapMemory;
+    trap_vector[TRAP_ILLEGAL] = TrapAbort;
+    trap_vector[TRAP_MATH] = TrapAbort;
     WriteRegister(REG_VECTOR_BASE, (unsigned int)trap_vector);
 }
 
@@ -29,18 +32,7 @@ TrapClock(UserContext *uctxt)
     clock_ticks++;
     TracePrintf(1, "TRAP_CLOCK pc=%p sp=%p\n", uctxt->pc, uctxt->sp);
 
-    if (init_process != 0 && init_process->state == PROC_BLOCKED &&
-        init_process->delay_until <= clock_ticks) {
-        init_process->state = PROC_READY;
-    }
-
-    if (current_process == idle_process) {
-        if (init_process != 0 && init_process->state == PROC_READY) {
-            ProcessSwitch(init_process);
-        }
-    } else if (current_process == init_process && init_process->state == PROC_RUNNING) {
-        ProcessSwitch(idle_process);
-    }
+    ProcessSchedule();
 
     if (current_process != 0) {
         *uctxt = current_process->user_context;
@@ -50,6 +42,8 @@ TrapClock(UserContext *uctxt)
 void
 TrapKernel(UserContext *uctxt)
 {
+    PCB *caller = current_process;
+
     if (current_process != 0) {
         current_process->user_context = *uctxt;
     }
@@ -57,6 +51,47 @@ TrapKernel(UserContext *uctxt)
     TracePrintf(1, "TRAP_KERNEL code=0x%x\n", uctxt->code);
     SyscallDispatch(uctxt);
 
+    if (caller == current_process && current_process != 0) {
+        current_process->user_context = *uctxt;
+    }
+
+    if (current_process != 0) {
+        *uctxt = current_process->user_context;
+    }
+}
+
+void
+TrapMemory(UserContext *uctxt)
+{
+    if (current_process != 0) {
+        current_process->user_context = *uctxt;
+    }
+
+    if (ProcessGrowStack(current_process, uctxt->addr) == SUCCESS) {
+        *uctxt = current_process->user_context;
+        return;
+    }
+
+    TracePrintf(0, "pid %d memory trap addr=%p code=0x%x\n",
+                current_process != 0 ? current_process->pid : -1,
+                uctxt->addr, uctxt->code);
+    ProcessExitCurrent(ERROR);
+    if (current_process != 0) {
+        *uctxt = current_process->user_context;
+    }
+}
+
+void
+TrapAbort(UserContext *uctxt)
+{
+    if (current_process != 0) {
+        current_process->user_context = *uctxt;
+    }
+
+    TracePrintf(0, "pid %d aborting on trap vector=%d code=0x%x pc=%p\n",
+                current_process != 0 ? current_process->pid : -1,
+                uctxt->vector, uctxt->code, uctxt->pc);
+    ProcessExitCurrent(ERROR);
     if (current_process != 0) {
         *uctxt = current_process->user_context;
     }
