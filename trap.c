@@ -2,6 +2,7 @@
 #include "process.h"
 #include "syscalls.h"
 #include "trap.h"
+#include "tty.h"
 
 static TrapHandler trap_vector[TRAP_VECTOR_SIZE];
 
@@ -19,6 +20,9 @@ TrapInit(void)
     trap_vector[TRAP_MEMORY] = TrapMemory;
     trap_vector[TRAP_ILLEGAL] = TrapAbort;
     trap_vector[TRAP_MATH] = TrapAbort;
+    trap_vector[TRAP_TTY_RECEIVE] = TrapTtyReceive;
+    trap_vector[TRAP_TTY_TRANSMIT] = TrapTtyTransmit;
+    trap_vector[TRAP_DISK] = TrapDisk;
     WriteRegister(REG_VECTOR_BASE, (unsigned int)trap_vector);
 }
 
@@ -95,6 +99,12 @@ TrapAbort(UserContext *uctxt)
     if (current_process != 0) {
         *uctxt = current_process->user_context;
     }
+}
+
+void
+TrapDisk(UserContext *uctxt)
+{
+    TracePrintf(1, "TRAP_DISK code=0x%x\n", uctxt->code);
 }
 
 void

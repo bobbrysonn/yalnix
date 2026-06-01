@@ -25,9 +25,18 @@ typedef struct pcb {
     unsigned int delay_until;
     int exit_status;
     int waiting_for_child;
+    int tty_id;
+    void *tty_read_buf;
+    int tty_read_len;
+    void *tty_read_line;
+    char *tty_write_buf;
+    int tty_write_len;
+    int tty_write_offset;
     struct pcb *parent;
     Queue children;
     QueueEntry ready_entry;
+    QueueEntry block_entry;
+    Queue *block_queue;
     QueueEntry child_entry;
 } PCB;
 

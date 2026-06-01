@@ -1,0 +1,43 @@
+\documentclass{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{enumitem}
+\usepackage{listings}
+
+\title{Checkpoint 5 Test Notes}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Scope}
+Checkpoint 5 requires complete \texttt{TtyRead} and \texttt{TtyWrite}
+syscalls, receive/transmit terminal trap handling, and the remaining trap
+handlers.
+
+\section*{Checks}
+\begin{itemize}[leftmargin=*]
+  \item \texttt{make clean \&\& make}: clean build succeeds with
+        \texttt{YALNIX\_FRAMEWORK} set.
+  \item \texttt{cp4\_fork}, \texttt{cp4\_exec}, and \texttt{cp4\_stack}: all
+        exit with status 0 under \texttt{./yalnix -W}.
+  \item \texttt{cp5\_tty}: writes a short message and then writes 1500 bytes,
+        forcing multiple \texttt{TtyTransmit} operations. The run exits with
+        status 0 and prints \texttt{cp5\_tty: long write complete}.
+\end{itemize}
+
+\section*{Read Test}
+\texttt{cp5\_read} verifies that a line can be split across two
+\texttt{TtyRead} calls and that leftover bytes are returned by the next read.
+The run was:
+
+\begin{lstlisting}[basicstyle=\ttfamily\small]
+printf "abcdef\nxyz\n" > cp5_input.txt
+printf "\n" | xvfb-run -a timeout 8 ./yalnix -W -x -I0 cp5_input.txt cp5_read
+\end{lstlisting}
+
+The test exits with status 0. \texttt{TTYLOG.0} contains
+\texttt{cp5\_read: ok}, and the trace shows two \texttt{TtyReceive} operations
+for the two input lines.
+
+\end{document}
