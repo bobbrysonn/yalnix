@@ -69,6 +69,7 @@ ProcessCreateIdle(UserContext *uctxt)
     proc->user_context.sp = (void *)(VMEM_1_LIMIT - 4);
     QueueInit(&proc->children);
     QueueEntryInit(&proc->ready_entry, proc);
+    QueueEntryInit(&proc->block_entry, proc);
     QueueEntryInit(&proc->child_entry, proc);
     ProcessRegister(proc);
 
@@ -104,6 +105,7 @@ ProcessCreateInit(UserContext *uctxt)
     proc->user_stack_low_page = MAX_PT_LEN;
     QueueInit(&proc->children);
     QueueEntryInit(&proc->ready_entry, proc);
+    QueueEntryInit(&proc->block_entry, proc);
     QueueEntryInit(&proc->child_entry, proc);
     ProcessRegister(proc);
 
@@ -143,6 +145,7 @@ ProcessCreateChild(PCB *parent)
     child->parent = parent;
     QueueInit(&child->children);
     QueueEntryInit(&child->ready_entry, child);
+    QueueEntryInit(&child->block_entry, child);
     QueueEntryInit(&child->child_entry, child);
 
     if (ProcessCopyRegion1(child, parent) == ERROR) {
@@ -342,6 +345,10 @@ ProcessDestroy(PCB *proc)
 
     if (proc->ready_entry.prev != 0) {
         QueueRemove(&ready_queue, &proc->ready_entry);
+    }
+    if (proc->block_queue != 0 && proc->block_entry.prev != 0) {
+        QueueRemove(proc->block_queue, &proc->block_entry);
+        proc->block_queue = 0;
     }
 
     if (proc->pid >= 0 && proc->pid < MAX_PROCS && process_table[proc->pid] == proc) {

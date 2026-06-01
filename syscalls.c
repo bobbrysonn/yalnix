@@ -1,6 +1,7 @@
 #include "memory.h"
 #include "process.h"
 #include "syscalls.h"
+#include "tty.h"
 
 int LoadProgram(char *name, char *args[], PCB *proc);
 
@@ -36,6 +37,16 @@ SyscallDispatch(UserContext *uctxt)
         break;
     case YALNIX_DELAY:
         uctxt->regs[0] = SysDelay(uctxt, (int)uctxt->regs[0]);
+        break;
+    case YALNIX_TTY_READ:
+        uctxt->regs[0] = SysTtyRead(uctxt, (int)uctxt->regs[0],
+                                    (void *)uctxt->regs[1],
+                                    (int)uctxt->regs[2]);
+        break;
+    case YALNIX_TTY_WRITE:
+        uctxt->regs[0] = SysTtyWrite(uctxt, (int)uctxt->regs[0],
+                                     (void *)uctxt->regs[1],
+                                     (int)uctxt->regs[2]);
         break;
     default:
         TracePrintf(1, "unsupported syscall code=0x%x\n", uctxt->code);

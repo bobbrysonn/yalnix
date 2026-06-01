@@ -3,6 +3,7 @@
 #include "memory.h"
 #include "process.h"
 #include "trap.h"
+#include "tty.h"
 
 int vm_enabled = 0;
 
@@ -33,6 +34,7 @@ KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt)
     ProcessInit();
     MemoryInit(pmem_size);
     MemoryBuildKernelRegion0();
+    TtyInit();
     TrapInit();
 
     idle_process = ProcessCreateIdle(uctxt);
