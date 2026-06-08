@@ -1,3 +1,4 @@
+#include "ipc.h"
 #include "memory.h"
 #include "process.h"
 #include "syscalls.h"
@@ -47,6 +48,44 @@ SyscallDispatch(UserContext *uctxt)
         uctxt->regs[0] = SysTtyWrite(uctxt, (int)uctxt->regs[0],
                                      (void *)uctxt->regs[1],
                                      (int)uctxt->regs[2]);
+        break;
+    case YALNIX_PIPE_INIT:
+        uctxt->regs[0] = SysPipeInit((int *)uctxt->regs[0]);
+        break;
+    case YALNIX_PIPE_READ:
+        uctxt->regs[0] = SysPipeRead(uctxt, (int)uctxt->regs[0],
+                                     (void *)uctxt->regs[1],
+                                     (int)uctxt->regs[2]);
+        break;
+    case YALNIX_PIPE_WRITE:
+        uctxt->regs[0] = SysPipeWrite((int)uctxt->regs[0],
+                                      (void *)uctxt->regs[1],
+                                      (int)uctxt->regs[2]);
+        break;
+    case YALNIX_LOCK_INIT:
+        uctxt->regs[0] = SysLockInit((int *)uctxt->regs[0]);
+        break;
+    case YALNIX_LOCK_ACQUIRE:
+        uctxt->regs[0] = SysAcquire(uctxt, (int)uctxt->regs[0]);
+        break;
+    case YALNIX_LOCK_RELEASE:
+        uctxt->regs[0] = SysRelease((int)uctxt->regs[0]);
+        break;
+    case YALNIX_CVAR_INIT:
+        uctxt->regs[0] = SysCvarInit((int *)uctxt->regs[0]);
+        break;
+    case YALNIX_CVAR_SIGNAL:
+        uctxt->regs[0] = SysCvarSignal((int)uctxt->regs[0]);
+        break;
+    case YALNIX_CVAR_BROADCAST:
+        uctxt->regs[0] = SysCvarBroadcast((int)uctxt->regs[0]);
+        break;
+    case YALNIX_CVAR_WAIT:
+        uctxt->regs[0] = SysCvarWait(uctxt, (int)uctxt->regs[0],
+                                     (int)uctxt->regs[1]);
+        break;
+    case YALNIX_RECLAIM:
+        uctxt->regs[0] = SysReclaim((int)uctxt->regs[0]);
         break;
     default:
         TracePrintf(1, "unsupported syscall code=0x%x\n", uctxt->code);

@@ -1,4 +1,5 @@
 #include "idle.h"
+#include "ipc.h"
 #include "kernel.h"
 #include "memory.h"
 #include "process.h"
@@ -276,6 +277,7 @@ ProcessExitCurrent(int status)
         child->parent = 0;
     }
 
+    IpcProcessExit(proc);
     proc->exit_status = status;
     proc->state = PROC_ZOMBIE;
 

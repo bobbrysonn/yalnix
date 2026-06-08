@@ -1,11 +1,11 @@
 K_SRC_DIR = .
-K_SRCS = kernelstart.c memory.c process.c Queue.c syscalls.c trap.c tty.c idle.c kernelbrk.c template.c re0sp.c re1sp.c
-K_INCS = kernel.h memory.h process.h Queue.h syscalls.h trap.h tty.h idle.h
+K_SRCS = kernelstart.c memory.c process.c Queue.c syscalls.c trap.c tty.c ipc.c idle.c kernelbrk.c template.c re0sp.c re1sp.c
+K_INCS = kernel.h memory.h process.h Queue.h syscalls.h trap.h tty.h ipc.h idle.h
 
 KERNEL_SRCS = $(K_SRCS:%=$(K_SRC_DIR)/%)
 KERNEL_OBJS = $(KERNEL_SRCS:%.c=%.o)
 KERNEL_INCS = $(K_INCS:%=$(K_SRC_DIR)/%)
-U_SRCS = init.c cp4_fork.c cp4_exec.c cp4_target.c cp4_stack.c cp5_tty.c cp5_read.c
+U_SRCS = init.c cp4_fork.c cp4_exec.c cp4_target.c cp4_stack.c cp5_tty.c cp5_read.c final_ipc.c
 USER_SRCS = $(U_SRCS:%=$(K_SRC_DIR)/%)
 USER_OBJS = $(USER_SRCS:%.c=%.o)
 USER_APPS = $(U_SRCS:%.c=%)
