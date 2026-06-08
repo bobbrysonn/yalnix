@@ -1,5 +1,6 @@
 #include "kernel.h"
 #include "idle.h"
+#include "ipc.h"
 #include "memory.h"
 #include "process.h"
 #include "trap.h"
@@ -34,6 +35,7 @@ KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt)
     ProcessInit();
     MemoryInit(pmem_size);
     MemoryBuildKernelRegion0();
+    IpcInit();
     TtyInit();
     TrapInit();
 

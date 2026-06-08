@@ -1,12 +1,13 @@
-K_SRC_DIR = .
-K_SRCS = kernelstart.c memory.c process.c Queue.c syscalls.c trap.c tty.c idle.c kernelbrk.c template.c re0sp.c re1sp.c
-K_INCS = kernel.h memory.h process.h Queue.h syscalls.h trap.h tty.h idle.h
+K_SRC_DIR = src
+U_SRC_DIR = user
+K_SRCS = kernelstart.c memory.c process.c Queue.c syscalls.c trap.c tty.c ipc.c idle.c kernelbrk.c template.c re0sp.c re1sp.c
+K_INCS = kernel.h memory.h process.h Queue.h syscalls.h trap.h tty.h ipc.h idle.h
 
 KERNEL_SRCS = $(K_SRCS:%=$(K_SRC_DIR)/%)
 KERNEL_OBJS = $(KERNEL_SRCS:%.c=%.o)
 KERNEL_INCS = $(K_INCS:%=$(K_SRC_DIR)/%)
-U_SRCS = init.c cp4_fork.c cp4_exec.c cp4_target.c cp4_stack.c cp5_tty.c cp5_read.c
-USER_SRCS = $(U_SRCS:%=$(K_SRC_DIR)/%)
+U_SRCS = init.c cp4_fork.c cp4_exec.c cp4_target.c cp4_stack.c cp5_tty.c cp5_read.c cp5_tty_rw.c final_ipc.c
+USER_SRCS = $(U_SRCS:%=$(U_SRC_DIR)/%)
 USER_OBJS = $(USER_SRCS:%.c=%.o)
 USER_APPS = $(U_SRCS:%.c=%)
 
@@ -22,24 +23,24 @@ KERNEL_LIBS = $(LIBDIR)/libkernel.a $(LIBDIR)/libhardware.so
 KERNEL_LDFLAGS = -L$(LIBDIR) -L/usr/lib/i386-linux-gnu -lkernel -lelf -Wl,-T,$(ETCDIR)/kernel.x -Wl,-R$(LIBDIR) -lhardware
 USER_LDFLAGS = -static -Wl,-T,$(ETCDIR)/user.x -u exit -u __brk -u __sbrk -u __mmap -u __default_morecore -L$(LIBDIR) -lyuser
 USER_LIBS = $(LIBDIR)/libyuser.a
-CPPFLAGS = -D_FILE_OFFSET_BITS=64 -m32 -fno-builtin -I. -I$(INCDIR) -g -DLINUX -fno-stack-protector
+CPPFLAGS = -D_FILE_OFFSET_BITS=64 -m32 -fno-builtin -I$(K_SRC_DIR) -I$(U_SRC_DIR) -I$(INCDIR) -g -DLINUX -fno-stack-protector
 
 all: $(YALNIX_OUTPUT) $(USER_APPS)
 
 $(YALNIX_OUTPUT): $(KERNEL_OBJS) $(KERNEL_LIBS) $(KERNEL_INCS)
 	$(CC) -m32 -o $@ $(KERNEL_OBJS) $(KERNEL_LDFLAGS)
 
-$(USER_APPS): %: %.o $(USER_LIBS)
+$(USER_APPS): %: $(U_SRC_DIR)/%.o $(USER_LIBS)
 	$(CC) -m32 -o $@ $< $(USER_LDFLAGS)
 
 clean:
-	rm -f *.o *~ TTYLOG* TRACE $(YALNIX_OUTPUT) $(USER_APPS) core.* ~/core
+	rm -f *.o $(K_SRC_DIR)/*.o $(U_SRC_DIR)/*.o *~ $(K_SRC_DIR)/*~ $(U_SRC_DIR)/*~ TTYLOG* TRACE $(YALNIX_OUTPUT) $(USER_APPS) core.* ~/core
 
 count:
 	wc $(KERNEL_SRCS) $(USER_SRCS)
 
 list:
-	ls -l *.c *.h
+	ls -l $(K_SRC_DIR)/*.c $(K_SRC_DIR)/*.h $(U_SRC_DIR)/*.c $(U_SRC_DIR)/*.h
 
 kill:
 	killall yalnixtty yalnixnet yalnix
