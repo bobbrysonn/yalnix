@@ -11,9 +11,9 @@ cp4_target
 cp4_stack
 cp5_tty
 cp5_read
+cp5_tty_rw
 final_ipc
 DISK
 PHYS_MEM_*
 core.*
 core
-user
